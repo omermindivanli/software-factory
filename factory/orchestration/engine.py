@@ -405,6 +405,7 @@ class FactoryEngine:
         work_item: WorkItem,
         initial_context: Optional[Dict[str, Any]] = None,
         resume_from: Optional[str] = None,
+        run_id: Optional[UUID] = None,
     ) -> FactoryState:
         """
         Run the factory for a work item.
@@ -424,10 +425,14 @@ class FactoryEngine:
                 raise ValueError(f"Checkpoint not found: {resume_from}")
         else:
             state = FactoryState(
-                run_id=uuid.uuid4(),
+                run_id=run_id or uuid.uuid4(),
                 work_item=work_item,
                 shared_context=initial_context or {},
             )
+
+        # Persist the accepted run before the first graph stage starts so callers
+        # can reliably poll a newly submitted run ID.
+        await self.checkpoint_store.save(state)
         
         logger.info("factory_run_start", run_id=str(state.run_id), work_item=work_item.title)
         

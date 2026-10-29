@@ -1,0 +1,7 @@
+name: software-factory
+version: 1.0.0
+description: Submit and monitor work in a local Software Factory instance
+provides_tools:
+  - factory_submit_work_item
+  - factory_list_runs
+  - factory_get_run

@@ -20,6 +20,33 @@ Local-first AI agents. Governed execution. Human-controlled release.
 
 </div>
 
+## Model providers
+
+The model router supports Anthropic, OpenAI, NVIDIA NIM Cloud, and OpenAI-compatible local Ollama endpoints. Provider credentials are read from environment variables and should stay in `.env` (never in `models.yaml`).
+
+1. Copy `.env.example` to `.env` and set `NVIDIA_API_KEY`.
+2. Restart the API container. The checked-in default routes all agent capabilities to `nvidia/nemotron-3-ultra-550b-a55b` through NVIDIA NIM Cloud.
+
+To use OpenAI, set `OPENAI_API_KEY`, change the OpenAI model ID in `router.models` if needed, then point `router.default_provider` and the desired entries in `router.routing_rules` at the OpenAI model. The model ID is sent unchanged to the provider.
+
+For NVIDIA NIM Cloud, use `provider: nvidia_nim`, `api_key_env: NVIDIA_API_KEY`, and `base_url: https://integrate.api.nvidia.com/v1`. For OpenAI, use `provider: openai` and `api_key_env: OPENAI_API_KEY`. NIM-specific request options can be set in the model's `extra_body` field; the Nemotron example enables its reasoning template. See NVIDIA's [NIM API reference](https://docs.api.nvidia.com/nim/reference/llm-apis) and [Nemotron 3 Ultra model page](https://build.nvidia.com/nvidia/nemotron-3-ultra-550b-a55b/build).
+
+## Hermes Agent integration
+
+This repository includes a local Hermes plugin at `integrations/hermes/software-factory`. It lets Hermes submit a work item to the factory and list or inspect its runs. The API returns a run ID immediately and checkpoints accepted work. The in-memory task queue itself is process-local, so a restart before a queued task begins can drop that submission.
+
+Install it for the local Hermes profile:
+
+```sh
+HERMES_PROFILE_DIR="$(dirname "$(hermes config path)")"
+mkdir -p "$HERMES_PROFILE_DIR/plugins/software-factory"
+cp -R integrations/hermes/software-factory/. "$HERMES_PROFILE_DIR/plugins/software-factory/"
+hermes plugins enable software-factory
+hermes gateway restart
+```
+
+The plugin defaults to `http://127.0.0.1:8000`. If the API uses another local address, set `SOFTWARE_FACTORY_URL` in Hermes' environment before restarting its gateway. Then use Hermes tools `factory_submit_work_item`, `factory_list_runs`, and `factory_get_run`. Keep the factory API reachable only on trusted networks: this local integration uses the API's existing access controls.
+
 ---
 
 ## 🏗️ Architecture & Agent Pipeline

@@ -1,5 +1,5 @@
 router:
-  default_provider: anthropic
+  default_provider: nvidia_nim
   fallback_provider: ollama
   models:
     - id: claude-opus-4
@@ -57,15 +57,37 @@ router:
       cost_per_1k_input: 0.0
       cost_per_1k_output: 0.0
       capabilities: [code_generation, review, planning]
+
+    # NVIDIA NIM Cloud (OpenAI-compatible). This is the default for all
+    # configured agent capabilities below.
+    - id: nvidia/nemotron-3-ultra-550b-a55b
+      provider: nvidia_nim
+      api_key_env: NVIDIA_API_KEY
+      base_url: https://integrate.api.nvidia.com/v1
+      max_tokens: 16384
+      temperature: 1.0
+      top_p: 0.95
+      extra_body:
+        chat_template_kwargs:
+          enable_thinking: true
+      capabilities: [planning, architecture, code_generation, code_review, test_generation, classification, triage, documentation, simple_tasks, think_tool, review, debugging, docs, complex_reasoning]
+
+    # OpenAI API example. Set your preferred model ID and route capabilities.
+    - id: gpt-4.1
+      provider: openai
+      api_key_env: OPENAI_API_KEY
+      max_tokens: 8192
+      temperature: 0.0
+      capabilities: [planning, architecture, code_generation, code_review, test_generation]
       
   routing_rules:
-    planning: claude-opus-4
-    architecture: claude-opus-4
-    code_generation: claude-sonnet-4
-    code_review: claude-sonnet-4
-    think_tool: claude-sonnet-4
-    test_generation: claude-3-5-sonnet
-    classification: claude-3-5-haiku
-    triage: claude-3-5-haiku
-    documentation: claude-3-5-haiku
-    simple_tasks: llama-3.1-8b
+    planning: nvidia/nemotron-3-ultra-550b-a55b
+    architecture: nvidia/nemotron-3-ultra-550b-a55b
+    code_generation: nvidia/nemotron-3-ultra-550b-a55b
+    code_review: nvidia/nemotron-3-ultra-550b-a55b
+    think_tool: nvidia/nemotron-3-ultra-550b-a55b
+    test_generation: nvidia/nemotron-3-ultra-550b-a55b
+    classification: nvidia/nemotron-3-ultra-550b-a55b
+    triage: nvidia/nemotron-3-ultra-550b-a55b
+    documentation: nvidia/nemotron-3-ultra-550b-a55b
+    simple_tasks: nvidia/nemotron-3-ultra-550b-a55b

@@ -11,15 +11,17 @@ class ModelConfig(BaseSettings):
     """Configuration for a single model."""
     
     id: str
-    provider: Literal["anthropic", "openai", "ollama", "google", "azure"] = "anthropic"
+    provider: Literal["anthropic", "openai", "nvidia_nim", "ollama"] = "anthropic"
     max_tokens: int = 8192
     temperature: float = 0.0
+    top_p: Optional[float] = None
     cost_per_1k_input: float = 0.0
     cost_per_1k_output: float = 0.0
     capabilities: List[str] = Field(default_factory=list)
     local: bool = False
     base_url: Optional[str] = None
     api_key_env: Optional[str] = None  # Env var name for API key
+    extra_body: Dict[str, Any] = Field(default_factory=dict)
     
     def get_api_key(self) -> Optional[str]:
         """Get API key from environment."""

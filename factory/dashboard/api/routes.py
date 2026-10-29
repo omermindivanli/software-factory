@@ -4,7 +4,7 @@ import asyncio
 import json
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
-from uuid import UUID
+from uuid import UUID, uuid4
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -63,6 +63,7 @@ class ConnectionManager:
 
 
 manager = ConnectionManager()
+_background_runs: set[asyncio.Task] = set()
 
 
 # Request/Response models
@@ -114,7 +115,6 @@ async def create_run(request: WorkItemRequest):
         priority=request.priority,
         labels=request.labels,
     )
-    
     state = await engine.run(work_item)
     
     return RunResponse(
@@ -130,6 +130,34 @@ async def create_run(request: WorkItemRequest):
         created_at=state.started_at.isoformat(),
         updated_at=state.updated_at.isoformat(),
     )
+
+
+@router.post("/runs/submit", status_code=202)
+async def submit_run(request: WorkItemRequest):
+    """Queue a run in this API process and return its ID immediately."""
+    engine = get_engine()
+    run_id = uuid4()
+    work_item = WorkItem(
+        title=request.title,
+        description=request.description,
+        source=request.source,
+        source_id=request.source_id or f"manual-{datetime.utcnow().timestamp()}",
+        repository=request.repository,
+        branch=request.branch,
+        priority=request.priority,
+        labels=request.labels,
+    )
+
+    async def execute_run() -> None:
+        try:
+            await engine.run(work_item, run_id=run_id)
+        except Exception:
+            logger.exception("background_run_failed", run_id=str(run_id))
+
+    task = asyncio.create_task(execute_run())
+    _background_runs.add(task)
+    task.add_done_callback(_background_runs.discard)
+    return {"run_id": str(run_id), "status": "queued"}
 
 
 @router.get("/runs")

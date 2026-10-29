@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, AsyncGenerator
@@ -9,6 +10,7 @@ import structlog
 
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langchain_core.tools import BaseTool, tool
 
 from factory.config.settings import settings, ModelConfig
@@ -96,7 +98,8 @@ class BaseAgent(ABC):
             self.tools.append(self._create_think_tool())
         
         # LLM client (initialized lazily)
-        self._llm: Optional[ChatAnthropic] = None
+        self._llm: Optional[Any] = None
+        self._llm_cache_key: Optional[tuple[str, str, Optional[str], Optional[str]]] = None
         
         # Execution tracking
         self._execution: Optional[AgentExecution] = None
@@ -112,8 +115,8 @@ class BaseAgent(ABC):
         
         return think
     
-    def _get_llm(self, model: Optional[ModelConfig] = None) -> ChatAnthropic:
-        """Get or create LLM client."""
+    def _get_model_config(self, model: Optional[ModelConfig] = None) -> ModelConfig:
+        """Resolve the configured model for this agent."""
         model = model or self.model_config
         if not model:
             # Use router to get default model for this agent type
@@ -131,19 +134,71 @@ class BaseAgent(ABC):
             }
             capability = capability_map.get(self.agent_type, "code_generation")
             model = self.router.get_model(capability)
-        
-        if self._llm is None or self._llm.model_name != model.id:
-            self._llm = ChatAnthropic(
-                model=model.id,
-                max_tokens=model.max_tokens,
-                temperature=model.temperature,
-                api_key=model.get_api_key(),
-            )
+
+        return model
+
+    def _get_llm(self, model: Optional[ModelConfig] = None) -> Any:
+        """Create the chat model configured for Anthropic, OpenAI, NVIDIA NIM, or Ollama."""
+        model = self._get_model_config(model)
+        api_key = model.get_api_key()
+        base_url = model.base_url
+        if model.provider == "nvidia_nim":
+            base_url = os.getenv("NVIDIA_NIM_BASE_URL") or base_url or "https://integrate.api.nvidia.com/v1"
+            api_key = api_key or os.getenv("NVIDIA_API_KEY")
+        elif model.provider == "openai":
+            api_key = api_key or os.getenv("OPENAI_API_KEY")
+        cache_key = (model.provider, model.id, base_url, api_key)
+
+        if self._llm is None or self._llm_cache_key != cache_key:
+            common = {
+                "model": model.id,
+                "temperature": model.temperature,
+            }
+            if model.top_p is not None:
+                common["top_p"] = model.top_p
+            if model.provider == "anthropic":
+                self._llm = ChatAnthropic(
+                    **common,
+                    max_tokens=model.max_tokens,
+                    api_key=api_key,
+                    **({"base_url": base_url} if base_url else {}),
+                )
+            elif model.provider in {"openai", "nvidia_nim", "ollama"}:
+                if model.provider == "nvidia_nim":
+                    if not api_key:
+                        raise ValueError(
+                            "NVIDIA NIM requires NVIDIA_API_KEY (or api_key_env on the model)."
+                        )
+                elif model.provider == "openai":
+                    if not api_key:
+                        raise ValueError(
+                            "OpenAI requires OPENAI_API_KEY (or api_key_env on the model)."
+                        )
+                else:
+                    base_url = base_url or "http://localhost:11434/v1"
+                    api_key = api_key or "ollama"
+
+                openai_options: Dict[str, Any] = {
+                    **common,
+                    "max_tokens": model.max_tokens,
+                    "api_key": api_key,
+                    "base_url": base_url,
+                }
+                if model.extra_body:
+                    openai_options["extra_body"] = model.extra_body
+                self._llm = ChatOpenAI(**openai_options)
+            else:
+                raise ValueError(
+                    f"Unsupported model provider '{model.provider}' for model '{model.id}'. "
+                    "Supported providers are anthropic, openai, nvidia_nim, and ollama."
+                )
+
+            self._llm_cache_key = cache_key
             # Bind tools
             if self.tools:
                 self._llm = self._llm.bind_tools(self.tools)
-        
-        return model
+
+        return self._llm
     
     @abstractmethod
     async def execute(self, state: FactoryState) -> FactoryState:
@@ -194,17 +249,18 @@ class BaseAgent(ABC):
         messages.append(HumanMessage(content=f"Task: {task_prompt}\n\nContext: {json.dumps(context, default=str)}"))
         
         iteration = 0
+        model_config: Optional[ModelConfig] = None
         while iteration < self.max_iterations:
             iteration += 1
             
-            # Get LLM with current model
-            model = self._get_llm()
-            model_config = self._get_llm()
-            
             try:
+                # Resolve provider credentials inside the guarded loop so a missing key
+                # becomes a recorded agent error instead of aborting the whole request.
+                model_config = self._get_model_config()
+                llm = self._get_llm(model_config)
                 # Invoke LLM
                 self._execution.status = AgentStatus.THINKING
-                response = await model.ainvoke(messages)
+                response = await llm.ainvoke(messages)
                 
                 # Track tokens
                 if hasattr(response, 'usage_metadata'):
