@@ -9,10 +9,10 @@ import {
   Terminal, FileText, Shield, RefreshCw, X,
   ExternalLink, PauseCircle, AlertTriangle
 } from 'lucide-react';
-import { cn, formatRelativeTime, formatCost, formatTokens, formatDuration, getStatusColor } from '../../lib/utils';
-import { api, queryKeys } from '../../lib/api';
+import { cn, formatRelativeTime, formatCost, formatTokens, formatDuration, getStatusColor, getPriorityColor } from '../lib/utils';
+import { api, queryKeys } from '../lib/api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useFactoryStore } from '../../store/factoryStore';
+import { useFactoryStore } from '../store/factoryStore';
 
 const stages = [
   { id: 'triage', name: 'Triage', icon: Play, description: 'Classify & route', color: 'blue' },
@@ -172,7 +172,7 @@ export function RunDetailPage() {
         <MetricStat title="Total Cost" value={formatCost(run.total_cost)} icon={DollarSign} color="green" />
         <MetricStat title="Tokens" value={formatTokens(run.total_tokens)} icon={Database} color="blue" />
         <MetricStat title="Duration" value={run.completed_at ? formatDuration(new Date(run.completed_at).getTime() - new Date(run.started_at).getTime()) : 'Running...'} icon={Clock} color="orange" />
-        <MetricStat title="Stages" value={`${Object.values(run.stages).filter(s => s.status === 'completed').length}/${stages.length}`} icon={CheckCircle} color="purple" />
+        <MetricStat title="Stages" value={`${Object.values(run.stages).filter((stage: any) => stage.status === 'completed').length}/${stages.length}`} icon={CheckCircle} color="purple" />
         <MetricStat title="Agents" value={Object.keys(run.agents).length} icon={Zap} color="indigo" />
       </div>
       
@@ -301,7 +301,7 @@ export function RunDetailPage() {
   );
 }
 
-function MetricStat({ title, value, icon: Icon, color }: { title: string; value: string; icon: React.ComponentType; color: keyof typeof stageColors }) {
+function MetricStat({ title, value, icon: Icon, color }: { title: string; value: string | number; icon: React.ComponentType<{ className?: string }>; color: keyof typeof stageColors }) {
   const colors = stageColors[color];
   return (
     <div className={cn('card p-4', colors.light, colors.border)}>

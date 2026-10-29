@@ -17,10 +17,10 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { cn, formatRelativeTime } from '../lib/utils';
-import { useFactoryStore, useWsConnected, useNotifications } from '../store/factoryStore';
-import { api } from '../lib/api';
-import { NotificationToast } from './NotificationToast';
+import { cn, formatRelativeTime } from '../../lib/utils';
+import { useFactoryStore, useWsConnected, useNotifications } from '../../store/factoryStore';
+import { api } from '../../lib/api';
+import { NotificationToast } from '../NotificationToast';
 
 const navigation = [
   { name: 'Overview', href: '/', icon: LayoutDashboard },

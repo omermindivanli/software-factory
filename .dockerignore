@@ -1,0 +1,7 @@
+.git
+.env
+.env.*
+.factory
+**/node_modules
+**/__pycache__
+**/*.py[cod]

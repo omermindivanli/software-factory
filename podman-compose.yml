@@ -3,12 +3,15 @@ version: '3.8'
 services:
   # Core API & Orchestration
   factory-api:
+    # Podman maps the mounted rootless API socket to container root ownership.
+    # This development-only override grants the API client socket access.
+    user: "0:0"
     build:
       context: .
       dockerfile: Dockerfile
-    command: uvicorn factory.dashboard.api.routes:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn factory.dashboard.api:app --host 0.0.0.0 --port 8000 --reload
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       - FACTORY_ENV=development
       - REDIS_URL=redis://redis:6379/0
@@ -17,12 +20,13 @@ services:
       - NEO4J_URI=bolt://neo4j:7687
       - NEO4J_USER=neo4j
       - NEO4J_PASSWORD=factory123
+      - DOCKER_HOST=unix:///var/run/docker.sock
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - OLLAMA_HOST=http://ollama:11434
     volumes:
       - ./factory:/app/factory:Z
-      - ./tests:/app/tests:Z
       - factory-data:/app/data:Z
+      - /run/user/501/podman/podman.sock:/var/run/docker.sock
     depends_on:
       - redis
       - chroma
@@ -40,7 +44,7 @@ services:
       dockerfile: Dockerfile.dev
     command: npm run dev -- --host 0.0.0.0 --port 5173
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     environment:
       - VITE_API_URL=http://localhost:8000
       - VITE_WS_URL=ws://localhost:8000
@@ -56,7 +60,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis-data:/data:Z
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
@@ -72,7 +76,7 @@ services:
   chroma:
     image: chromadb/chroma:0.5.5
     ports:
-      - "8001:8000"
+      - "127.0.0.1:8001:8000"
     volumes:
       - chroma-data:/chroma/chroma:Z
     environment:
@@ -91,8 +95,8 @@ services:
   neo4j:
     image: neo4j:5.18-community
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
     volumes:
       - neo4j-data:/data:Z
       - neo4j-logs:/logs:Z
@@ -131,7 +135,7 @@ services:
   prometheus:
     image: prom/prometheus:v2.52.0
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:Z
       - prometheus-data:/prometheus:Z
@@ -147,7 +151,7 @@ services:
   grafana:
     image: grafana/grafana:11.0.0
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:Z
       - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:Z

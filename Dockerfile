@@ -15,14 +15,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Python dependencies
 WORKDIR /app
 COPY pyproject.toml README.md ./
+COPY factory/ ./factory/
 RUN pip install --no-cache-dir -e ".[dev]"
 
 # Install frontend dependencies
-COPY dashboard-frontend/package.json dashboard-frontend/package-lock.json* ./dashboard-frontend/
-RUN cd dashboard-frontend && (npm ci 2>/dev/null || npm install)
+COPY dashboard-frontend/package.json dashboard-frontend/package-lock.json ./dashboard-frontend/
+RUN cd dashboard-frontend && npm ci
 
 # Copy source code
-COPY factory/ ./factory/
 COPY dashboard-frontend/ ./dashboard-frontend/
 
 # Build frontend
@@ -38,4 +38,4 @@ USER factory
 EXPOSE 8000 5173
 
 # Default command
-CMD ["uvicorn", "factory.dashboard.api.routes:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "factory.dashboard.api:app", "--host", "0.0.0.0", "--port", "8000"]

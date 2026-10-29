@@ -22,6 +22,7 @@ dependencies = [
 
     # Database & storage
     "chromadb>=0.5.0",
+    "neo4j>=5.18.0",
     "redis>=5.0.0",
     "sqlalchemy>=2.0.0",
     "alembic>=1.13.0",
@@ -59,7 +60,6 @@ dev = [
     "mypy>=1.10.0",
     "pre-commit>=3.7.0",
 ]
-neo4j = ["neo4j>=5.18.0"]
 kuzu = ["kuzu>=0.5.0"]
 podman = ["podman-compose>=1.0.0"]
 

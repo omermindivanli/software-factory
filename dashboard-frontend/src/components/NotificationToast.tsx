@@ -2,8 +2,8 @@
 
 import React, { useEffect } from 'react';
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { useFactoryStore } from '../../store/factoryStore';
+import { cn } from '../lib/utils';
+import { useFactoryStore } from '../store/factoryStore';
 
 interface NotificationToastProps {
   notification: {

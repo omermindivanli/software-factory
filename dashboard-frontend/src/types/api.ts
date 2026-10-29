@@ -157,7 +157,9 @@ export interface StageMetrics {
   throughput: number;
   backlog: number;
   pass_rate?: number;
-  avg_time?: number;
+  avg_cycle_time?: number;
+  queue_depth?: number;
+  health?: string;
   deployments?: number;
   cycle_time?: number;
   updated?: number;

@@ -65,7 +65,8 @@ class StageConfig(BaseSettings):
     
     id: str
     name: str
-    agent: str  # Agent class name
+    agent: Optional[str] = None  # Single-agent stage
+    agents: List[str] = Field(default_factory=list)  # Multi-agent stages
     description: str = ""
     parallelism: int = 1
     schedule: Optional[str] = None  # cron expression or "on_merge", "continuous"

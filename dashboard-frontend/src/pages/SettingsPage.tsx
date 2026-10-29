@@ -6,9 +6,9 @@ import {
   Globe, Bell, Palette, Wrench, Save,
   CheckCircle, XCircle
 } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { useFactoryStore } from '../../store/factoryStore';
-import { api } from '../../lib/api';
+import { cn } from '../lib/utils';
+import { useFactoryStore } from '../store/factoryStore';
+import { api } from '../lib/api';
 
 const tabs = [
   { id: 'general', name: 'General', icon: Wrench },

@@ -7,9 +7,9 @@ import {
   BookOpen, Activity, TrendingUp, Clock, 
   RefreshCw, Plus, ExternalLink
 } from 'lucide-react';
-import { cn, formatRelativeTime, formatCost, formatTokens, getStatusColor } from '../../lib/utils';
-import { useFactoryStore } from '../../store/factoryStore';
-import { api, queryKeys } from '../../lib/api';
+import { cn, formatRelativeTime, formatCost, formatTokens, getStatusColor } from '../lib/utils';
+import { useFactoryStore } from '../store/factoryStore';
+import { api, queryKeys } from '../lib/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const stages = [
@@ -227,7 +227,7 @@ export function OverviewPage() {
                   <p className="text-xs text-gray-500">{formatTokens(run.metrics.total_tokens)} tokens</p>
                 </div>
               </Link>
-            ))}
+            ))
           )}
         </div>
       </div>

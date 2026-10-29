@@ -9,10 +9,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY pyproject.toml ./
+COPY pyproject.toml README.md ./
+COPY factory/ ./factory/
 RUN pip install --no-cache-dir -e ".[dev]"
+
+RUN useradd -m -u 1000 factory
 
 USER factory
 
 EXPOSE 8000
-CMD ["uvicorn", "factory.dashboard.api.routes:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "factory.dashboard.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

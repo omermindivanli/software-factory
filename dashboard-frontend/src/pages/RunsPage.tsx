@@ -7,9 +7,9 @@ import {
   Clock, DollarSign, Database, Download,
   RefreshCw, Plus
 } from 'lucide-react';
-import { cn, formatRelativeTime, formatCost, formatTokens, getStatusColor, getPriorityColor } from '../../lib/utils';
-import { useFactoryStore } from '../../store/factoryStore';
-import { api, queryKeys } from '../../lib/api';
+import { cn, formatRelativeTime, formatCost, formatTokens, getStatusColor, getPriorityColor } from '../lib/utils';
+import { useFactoryStore } from '../store/factoryStore';
+import { api, queryKeys } from '../lib/api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const statusOptions = ['all', 'running', 'completed', 'failed', 'paused', 'cancelled'];

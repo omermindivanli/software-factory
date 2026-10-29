@@ -1,5 +1,4 @@
 /** Stage Detail Page */
-
 import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
@@ -7,10 +6,10 @@ import {
   ArrowLeft, RefreshCw, TrendingUp, Clock, Users,
   Filter, Search, ChevronDown, Download, ExternalLink
 } from 'lucide-react';
-import { cn, formatRelativeTime, formatCost, formatTokens, formatDuration, getStatusColor } from '../../lib/utils';
-import { api, queryKeys } from '../../lib/api';
+import { cn, formatRelativeTime, formatCost, formatTokens, formatDuration, getStatusColor } from '../lib/utils';
+import { api, queryKeys } from '../lib/api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useFactoryStore } from '../../store/factoryStore';
+import { useFactoryStore } from '../store/factoryStore';
 
 const stageInfo: Record<string, any> = {
   triage: { name: 'Triage', icon: Play, description: 'Classify and route inbound work', color: 'blue', longDesc: 'The Triage stage classifies incoming work items (issues, PRs, Slack messages), removes duplicates, assigns priority, and routes to the appropriate next stage.' },
@@ -37,6 +36,7 @@ export function StageDetailPage() {
   const { timeRange, setTimeRange, setSelectedStage } = useFactoryStore();
   const queryClient = useQueryClient();
   const [sortBy, setSortBy] = React.useState<'updated' | 'cost' | 'duration'>('updated');
+  const [search, setSearch] = React.useState('');
   
   const stage = stageInfo[stageId || ''];
   
@@ -58,7 +58,7 @@ export function StageDetailPage() {
     queryFn: async () => {
       const result = await api.listRuns(100, 0);
       // Filter runs that have this stage
-      return result.runs.filter((run: any) => run.stages?.[stageId]);
+      return result.runs.filter((run: any) => run.stages?.[stageId ?? '']);
     },
     refetchInterval: 30000,
   });
@@ -72,14 +72,24 @@ export function StageDetailPage() {
     setSelectedStage(stageId!);
   }, [stageId, setSelectedStage]);
   
-  const sortedRuns = React.useMemo(() => {
+  const filteredRuns = React.useMemo(() => {
     if (!runs) return [];
-    return [...runs].sort((a, b) => {
-      const aVal = new Date(a.updated_at).getTime();
-      const bVal = new Date(b.updated_at).getTime();
-      return bVal - aVal;
-    });
-  }, [runs, sortBy]);
+    const query = search.toLowerCase();
+    return runs.filter((run: any) => !query ||
+      run.work_item.title.toLowerCase().includes(query) ||
+      run.work_item.repository.toLowerCase().includes(query));
+  }, [runs, search]);
+
+  const sortedRuns = React.useMemo(() => [...filteredRuns].sort((a: any, b: any) => {
+    if (sortBy === 'cost') return b.metrics.total_cost - a.metrics.total_cost;
+    if (sortBy === 'duration') {
+      const duration = (run: any) => run.completed_at
+        ? new Date(run.completed_at).getTime() - new Date(run.started_at).getTime()
+        : 0;
+      return duration(b) - duration(a);
+    }
+    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+  }), [filteredRuns, sortBy]);
   
   return (
     <div className="space-y-6">
@@ -205,43 +215,12 @@ export function StageDetailPage() {
     </div>
   );
   
-  // Local state for search
-  const [search, setSearch] = React.useState('');
-  
-  const filteredRuns = React.useMemo(() => {
-    if (!runs) return [];
-    return runs.filter((run) => {
-      if (!search) return true;
-      const s = search.toLowerCase();
-      return (
-        run.work_item.title.toLowerCase().includes(s) ||
-        run.work_item.repository.toLowerCase().includes(s)
-      );
-    });
-  }, [runs, search]);
-  
-  const sortedRuns = React.useMemo(() => {
-    return [...filteredRuns].sort((a, b) => {
-      if (sortBy === 'updated') {
-        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-      }
-      if (sortBy === 'cost') {
-        return b.metrics.total_cost - a.metrics.total_cost;
-      }
-      if (sortBy === 'duration') {
-        const aDur = a.completed_at ? new Date(a.completed_at).getTime() - new Date(a.started_at).getTime() : 0;
-        const bDur = b.completed_at ? new Date(b.completed_at).getTime() - new Date(b.started_at).getTime() : 0;
-        return bDur - aDur;
-      }
-      return 0;
-    });
-  }, [filteredRuns, sortBy]);
 }
 
 function StageMetricCard({ title, value, icon: Icon, color, subtitle }: { 
   title: string; 
   value: string | number; 
-  icon: React.ComponentType;
+  icon: React.ComponentType<{ className?: string }>;
   color: keyof typeof stageColors;
   subtitle: string;
 }) {
@@ -309,6 +288,3 @@ function StageRunRow({ run, stageId, colors }: { run: any; stageId: string; colo
     </Link>
   );
 }
-
-// Need to import formatDuration and getStatusColor
-import { formatDuration, getStatusColor } from '../../lib/utils';

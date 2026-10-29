@@ -1,5 +1,7 @@
 """Factory agents package."""
 
+from typing import Dict
+
 from factory.agents.base import BaseAgent, ThinkTool, AgentFactory, get_agent_factory
 from factory.agents.triage import TriageAgent, DynamicTriageAgent
 from factory.agents.architect import ArchitectAgent, DynamicArchitectAgent
